@@ -151,7 +151,7 @@ export const IRISH_FOOD_ITEMS: FoodItem[] = [
 { id: "sugar", name: "Sugar", category: "pantry", commonNames: ["sugar", "white sugar", "caster sugar", "granulated sugar"] },
 { id: "juice", name: "Fruit Juice", category: "pantry", commonNames: ["orange juice", "apple juice", "juice"] },
 { id: "water", name: "Bottled Water", category: "pantry", commonNames: ["water", "bottled water", "sparkling water", "still water"] },
-{ id: "soft-drinks", name: "Soft Drinks", category: "pantry", commonNames: ["coke", "fizzy drinks", "lemonade"] },
+{ id: "soft-drinks", name: "Soft Drinks", category: "pantry", commonNames: ["coke", "fizzy drinks", "lemonade"] }
 ];
 
 export const searchFoodItems = (query: string): FoodItem[] => {
