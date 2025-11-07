@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       kitchen_items: {
         Row: {
+          best_before_date: string | null
           category: Database["public"]["Enums"]["storage_category"]
           created_at: string
           id: string
@@ -26,6 +27,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          best_before_date?: string | null
           category: Database["public"]["Enums"]["storage_category"]
           created_at?: string
           id?: string
@@ -36,6 +38,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          best_before_date?: string | null
           category?: Database["public"]["Enums"]["storage_category"]
           created_at?: string
           id?: string

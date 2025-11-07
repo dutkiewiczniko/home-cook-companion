@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { items, preferences, goingShopping, budget } = await req.json();
+    const { items, mealType, dietaryPreference, optionalIngredients, goingShopping, budget } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
@@ -23,15 +23,34 @@ serve(async (req) => {
       .map((item: any) => `- ${item.name} (${item.quantity}) [${item.category}]`)
       .join('\n');
 
-    const prompt = `You are a helpful cooking assistant. Based on the following kitchen inventory, suggest 3 delicious meal ideas.
+    let promptParts = [`You are a helpful cooking assistant. Based on the following kitchen inventory, suggest 3 delicious meal ideas.
 
 Available Ingredients:
 ${itemsList}
+`];
 
-User Preferences: ${preferences || 'No specific preferences'}
-${goingShopping ? 'User can go shopping for additional ingredients' : 'User prefers to use only available ingredients'}
-${budget ? `Budget: ${budget}` : ''}
+    if (mealType) {
+      promptParts.push(`Meal Type: ${mealType}`);
+    }
+    
+    if (dietaryPreference) {
+      promptParts.push(`Dietary Preference: ${dietaryPreference}`);
+    }
+    
+    if (optionalIngredients) {
+      promptParts.push(`Optional ingredients to try: ${optionalIngredients}`);
+    }
+    
+    if (goingShopping) {
+      promptParts.push('User can go shopping for additional ingredients');
+      if (budget) {
+        promptParts.push(`Budget: €${budget}`);
+      }
+    } else {
+      promptParts.push('User prefers to use only available ingredients');
+    }
 
+    promptParts.push(`
 For each meal suggestion, provide:
 1. Meal name
 2. Brief description (1-2 sentences)
@@ -39,7 +58,9 @@ For each meal suggestion, provide:
 4. Simple cooking instructions (3-5 steps)
 5. Estimated cooking time
 
-Format your response in a clear, structured way. Be creative and consider the user's preferences!`;
+Format your response using markdown with ### for headings, ** for bold text, and - for bullet points. Be creative and consider the user's preferences!`);
+
+    const prompt = promptParts.join('\n\n');
 
     console.log('Sending request to AI gateway...');
     
