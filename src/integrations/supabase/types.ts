@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_nutrition_log: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          total_calories: number
+          total_carbs: number
+          total_fat: number
+          total_protein: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          total_calories?: number
+          total_carbs?: number
+          total_fat?: number
+          total_protein?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          total_calories?: number
+          total_carbs?: number
+          total_fat?: number
+          total_protein?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       kitchen_items: {
         Row: {
           best_before_date: string | null
@@ -47,6 +83,45 @@ export type Database = {
           quantity?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      nutrition_profiles: {
+        Row: {
+          carbs_g: number
+          created_at: string
+          energy_kcal: number
+          fat_g: number
+          food_name: string
+          id: string
+          is_estimate: boolean
+          protein_g: number
+          serving_size_g: number
+          updated_at: string
+        }
+        Insert: {
+          carbs_g?: number
+          created_at?: string
+          energy_kcal?: number
+          fat_g?: number
+          food_name: string
+          id?: string
+          is_estimate?: boolean
+          protein_g?: number
+          serving_size_g?: number
+          updated_at?: string
+        }
+        Update: {
+          carbs_g?: number
+          created_at?: string
+          energy_kcal?: number
+          fat_g?: number
+          food_name?: string
+          id?: string
+          is_estimate?: boolean
+          protein_g?: number
+          serving_size_g?: number
+          updated_at?: string
         }
         Relationships: []
       }
