@@ -24,11 +24,17 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
   const [bestBefore, setBestBefore] = useState("");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
+  const [storageCategory, setStorageCategory] =
+    useState<Database["public"]["Enums"]["storage_category"]>("pantry");
 
   const handleFoodSelect = (food: FoodItem) => {
-    setSelectedFood(food);
-    setStep("details");
-  };
+  setSelectedFood(food);
+  setStorageCategory(
+    food.category as Database["public"]["Enums"]["storage_category"]
+  );
+  setStep("details");
+};
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +53,7 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
         user_id: user.id,
         name: selectedFood.name,
         quantity: quantity || "1",
-        category: selectedFood.category as Database["public"]["Enums"]["storage_category"],
+        category: storageCategory,
         notes: notes || null,
         best_before_date: bestBefore || null,
       }]);
@@ -85,6 +91,7 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
       setQuantity("");
       setBestBefore("");
       setNotes("");
+      setStorageCategory("pantry");
     }
   };
 
@@ -121,6 +128,25 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="storage-category">Storage Category</Label>
+              <select
+                id="storage-category"
+                value={storageCategory}
+                onChange={(e) => setStorageCategory(e.target.value as Database["public"]["Enums"]["storage_category"])}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="pantry">Pantry</option>
+                <option value="fridge">Fridge</option>
+                <option value="freezer">Freezer</option>
+                <option value="produce">Produce</option>
+                <option value="spices">Spices</option>
+              </select>
+            </div>
+
+            
+
             <div className="space-y-2">
               <Label htmlFor="best-before">Best Before Date (optional)</Label>
               <Input
