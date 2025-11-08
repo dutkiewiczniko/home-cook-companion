@@ -84,8 +84,8 @@ export const FoodSelector = ({ onSelect, selectedCategory }: FoodSelectorProps) 
                 const customItem: FoodItem = {
                   id: `custom-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}`,
                   name,
-                  // default category – works with your DB enum
                   category: "pantry" as any,
+                  commonNames: [],
                 };
 
                 onSelect(customItem);

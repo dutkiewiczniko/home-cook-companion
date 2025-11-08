@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuthForms } from "@/components/AuthForms";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { KitchenInventory } from "@/components/KitchenInventory";
-import { MealSuggestions } from "@/components/MealSuggestions";
+import { RecipesPage } from "@/pages/RecipesPage";
+import { NutritionPage } from "@/pages/NutritionPage";
 import { Button } from "@/components/ui/button";
-import { ChefHat, LogOut } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChefHat, LogOut, Package, Sparkles, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -57,7 +59,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
-      <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+      <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -66,7 +68,7 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Kitchen AI
+                Pantry Pal
               </h1>
               <p className="text-muted-foreground">Your smart cooking companion</p>
             </div>
@@ -81,25 +83,44 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Inventory */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">Your Kitchen Inventory</h2>
-              <AddItemDialog onItemAdded={() => setRefreshTrigger((prev) => prev + 1)} />
-            </div>
-            <KitchenInventory
-              refreshTrigger={refreshTrigger}
-              onItemsChange={setItems}
-            />
-          </div>
+        {/* Main Content - Tabs */}
+        <Tabs defaultValue="inventory" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="inventory" className="gap-2">
+              <Package className="w-4 h-4" />
+              Inventory
+            </TabsTrigger>
+            <TabsTrigger value="recipes" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              AI Recipes
+            </TabsTrigger>
+            <TabsTrigger value="nutrition" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Nutrition
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Right Column - AI Suggestions */}
-          <div className="space-y-6">
-            <MealSuggestions items={items} />
-          </div>
-        </div>
+          <TabsContent value="inventory">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-foreground">Your Kitchen Inventory</h2>
+                <AddItemDialog onItemAdded={() => setRefreshTrigger((prev) => prev + 1)} />
+              </div>
+              <KitchenInventory
+                refreshTrigger={refreshTrigger}
+                onItemsChange={setItems}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="recipes">
+            <RecipesPage items={items} />
+          </TabsContent>
+
+          <TabsContent value="nutrition">
+            <NutritionPage />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
