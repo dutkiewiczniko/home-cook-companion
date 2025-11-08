@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { IRISH_FOOD_ITEMS, searchFoodItems, getCategoryItems, type FoodItem } from "@/data/irishFoodItems";
 import { CategoryIcon } from "./CategoryIcon";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 interface FoodSelectorProps {
   onSelect: (item: FoodItem) => void;
@@ -65,12 +66,34 @@ export const FoodSelector = ({ onSelect, selectedCategory }: FoodSelectorProps) 
         </div>
       </div>
 
-      {searchQuery ? (
+            {searchQuery ? (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} found
+            {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} found
           </p>
-          <FoodGrid items={filteredItems} />
+
+          {filteredItems.length > 0 && <FoodGrid items={filteredItems} />}
+
+          {searchQuery.trim().length > 0 && (
+            <Button
+              type="button"
+              className="w-full justify-center mt-2"
+              onClick={() => {
+                const name = searchQuery.trim();
+
+                const customItem: FoodItem = {
+                  id: `custom-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}`,
+                  name,
+                  // default category – works with your DB enum
+                  category: "pantry" as any,
+                };
+
+                onSelect(customItem);
+              }}
+            >
+              Add &quot;{searchQuery.trim()}&quot; as a custom item
+            </Button>
+          )}
         </div>
       ) : (
         <Tabs defaultValue={selectedCategory || "fridge"} className="w-full">
@@ -97,13 +120,15 @@ export const FoodSelector = ({ onSelect, selectedCategory }: FoodSelectorProps) 
             </TabsTrigger>
           </TabsList>
 
-          {categoryItems && Object.entries(categoryItems).map(([category, items]) => (
-            <TabsContent key={category} value={category}>
-              <FoodGrid items={items} />
-            </TabsContent>
-          ))}
+          {categoryItems &&
+            Object.entries(categoryItems).map(([category, items]) => (
+              <TabsContent key={category} value={category}>
+                <FoodGrid items={items} />
+              </TabsContent>
+            ))}
         </Tabs>
       )}
+
     </div>
   );
 };
