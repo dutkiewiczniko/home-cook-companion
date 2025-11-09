@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { FoodSelector } from "./FoodSelector";
 import type { FoodItem } from "@/data/irishFoodItems";
+import { getDefaultQuantity } from "@/data/defaultQuantities";
 
 interface AddItemDialogProps {
   onItemAdded: () => void;
@@ -28,12 +29,14 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
     useState<Database["public"]["Enums"]["storage_category"]>("pantry");
 
   const handleFoodSelect = (food: FoodItem) => {
-  setSelectedFood(food);
-  setStorageCategory(
-    food.category as Database["public"]["Enums"]["storage_category"]
-  );
-  setStep("details");
-};
+    setSelectedFood(food);
+    setStorageCategory(
+      food.category as Database["public"]["Enums"]["storage_category"]
+    );
+    // Set default quantity based on item type
+    setQuantity(getDefaultQuantity(food.name));
+    setStep("details");
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +55,7 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
       const { error } = await supabase.from("kitchen_items").insert([{
         user_id: user.id,
         name: selectedFood.name,
-        quantity: quantity || "1",
+        quantity: quantity || getDefaultQuantity(selectedFood.name),
         category: storageCategory,
         notes: notes || null,
         best_before_date: bestBefore || null,

@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit } from "lucide-react";
+import { Trash2, Edit, Utensils } from "lucide-react";
 import { CategoryIcon } from "./CategoryIcon";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { EditItemDialog } from "./EditItemDialog";
+import { ConsumeItemDialog } from "./ConsumeItemDialog";
 
 interface KitchenItem {
   id: string;
@@ -13,6 +15,7 @@ interface KitchenItem {
   quantity: string;
   category: "fridge" | "freezer" | "produce" | "spices" | "pantry";
   notes: string | null;
+  best_before_date: string | null;
 }
 
 interface KitchenInventoryProps {
@@ -23,6 +26,8 @@ interface KitchenInventoryProps {
 export const KitchenInventory = ({ refreshTrigger, onItemsChange }: KitchenInventoryProps) => {
   const [items, setItems] = useState<KitchenItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingItem, setEditingItem] = useState<KitchenItem | null>(null);
+  const [consumingItem, setConsumingItem] = useState<KitchenItem | null>(null);
   const { toast } = useToast();
 
   const fetchItems = async () => {
@@ -112,8 +117,21 @@ export const KitchenInventory = ({ refreshTrigger, onItemsChange }: KitchenInven
   }
 
   return (
-    <div className="space-y-6">
-      {Object.entries(groupedItems).map(([category, categoryItems]) => (
+    <>
+      <EditItemDialog
+        item={editingItem}
+        open={!!editingItem}
+        onOpenChange={(open) => !open && setEditingItem(null)}
+        onItemUpdated={fetchItems}
+      />
+      <ConsumeItemDialog
+        item={consumingItem}
+        open={!!consumingItem}
+        onOpenChange={(open) => !open && setConsumingItem(null)}
+        onItemConsumed={fetchItems}
+      />
+      <div className="space-y-6">
+        {Object.entries(groupedItems).map(([category, categoryItems]) => (
         <Card key={category} className="overflow-hidden border-border/50 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5 border-b">
             <CardTitle className="flex items-center gap-3">
@@ -142,8 +160,27 @@ export const KitchenInventory = ({ refreshTrigger, onItemsChange }: KitchenInven
                     <Button
                       size="sm"
                       variant="ghost"
+                      onClick={() => setConsumingItem(item)}
+                      className="hover:bg-primary/10 hover:text-primary"
+                      title="Consume & Log"
+                    >
+                      <Utensils className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingItem(item)}
+                      className="hover:bg-secondary/10 hover:text-secondary"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={() => handleDelete(item.id, item.name)}
                       className="hover:bg-destructive/10 hover:text-destructive"
+                      title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -153,7 +190,8 @@ export const KitchenInventory = ({ refreshTrigger, onItemsChange }: KitchenInven
             </div>
           </CardContent>
         </Card>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 };
