@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Loader2, RefreshCw, Wand2, Utensils } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { RecipeConsumptionDialog } from "@/components/RecipeConsumptionDialog";
 
 interface Recipe {
   id: string;
@@ -42,98 +43,9 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [tweakingRecipeId, setTweakingRecipeId] = useState<string | null>(null);
   const [tweakText, setTweakText] = useState("");
-  const [loggingRecipe, setLoggingRecipe] = useState<string | null>(null);
+  const [recipeToLog, setRecipeToLog] = useState<Recipe | null>(null);
   const { toast } = useToast();
 
-  const logRecipeAsEaten = async (recipe: Recipe) => {
-    setLoggingRecipe(recipe.id);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Extract ingredients from recipe content (simple parsing)
-      const ingredientSection = recipe.content.split("Ingredients:")[1]?.split("Instructions:")[0];
-      const ingredients = ingredientSection
-        ?.split("\n")
-        .filter((line) => line.trim().startsWith("-") || line.trim().match(/^\d+/))
-        .map((line) => line.replace(/^[-\d.]+\s*/, "").trim()) || [];
-
-      let totalCalories = 0;
-      let totalProtein = 0;
-      let totalFat = 0;
-      let totalCarbs = 0;
-
-      // Try to match ingredients to nutrition profiles
-      for (const ingredient of ingredients) {
-        const { data: nutritionProfile } = await supabase
-          .from("nutrition_profiles")
-          .select("*")
-          .ilike("food_name", `%${ingredient.split(" ")[0]}%`)
-          .limit(1)
-          .maybeSingle();
-
-        if (nutritionProfile) {
-          // Assume 100g per ingredient as simple estimation
-          totalCalories += nutritionProfile.energy_kcal;
-          totalProtein += nutritionProfile.protein_g;
-          totalFat += nutritionProfile.fat_g;
-          totalCarbs += nutritionProfile.carbs_g;
-        }
-      }
-
-      // If no matches found, use recipe macros or fallback
-      if (totalCalories === 0) {
-        totalCalories = recipe.calories || 500;
-        totalProtein = recipe.protein || 25;
-        totalFat = recipe.fat || 15;
-        totalCarbs = recipe.carbs || 50;
-      }
-
-      // Update or insert daily nutrition log
-      const today = new Date().toISOString().split("T")[0];
-      const { data: existingLog } = await supabase
-        .from("daily_nutrition_log")
-        .select("*")
-        .eq("date", today)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingLog) {
-        await supabase
-          .from("daily_nutrition_log")
-          .update({
-            total_calories: existingLog.total_calories + totalCalories,
-            total_protein: existingLog.total_protein + totalProtein,
-            total_fat: existingLog.total_fat + totalFat,
-            total_carbs: existingLog.total_carbs + totalCarbs,
-          })
-          .eq("id", existingLog.id);
-      } else {
-        await supabase.from("daily_nutrition_log").insert({
-          user_id: user.id,
-          date: today,
-          total_calories: totalCalories,
-          total_protein: totalProtein,
-          total_fat: totalFat,
-          total_carbs: totalCarbs,
-        });
-      }
-
-      toast({
-        title: "Recipe logged!",
-        description: `${recipe.title} has been added to your nutrition tracker.`,
-      });
-    } catch (error: any) {
-      console.error("Error logging recipe:", error);
-      toast({
-        title: "Error",
-        description: "Failed to log recipe to nutrition tracker",
-        variant: "destructive",
-      });
-    } finally {
-      setLoggingRecipe(null);
-    }
-  };
 
   const generateRecipes = async (regenerateAll = false, tweakRecipeId?: string, tweakPrompt?: string) => {
     if (items.length === 0) {
@@ -377,21 +289,11 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
                   <div className="space-y-3 pt-4 border-t">
                     <Button
                       size="sm"
-                      onClick={() => logRecipeAsEaten(recipe)}
-                      disabled={loggingRecipe === recipe.id}
+                      onClick={() => setRecipeToLog(recipe)}
                       className="w-full bg-gradient-to-r from-primary to-secondary"
                     >
-                      {loggingRecipe === recipe.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Logging...
-                        </>
-                      ) : (
-                        <>
-                          <Utensils className="w-4 h-4 mr-2" />
-                          Log as Eaten
-                        </>
-                      )}
+                      <Utensils className="w-4 h-4 mr-2" />
+                      Log as Eaten
                     </Button>
 
                     {tweakingRecipeId === recipe.id ? (
@@ -452,6 +354,19 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
           </div>
         </div>
       )}
+
+      {/* Recipe Consumption Dialog */}
+      <RecipeConsumptionDialog
+        recipe={recipeToLog}
+        open={!!recipeToLog}
+        onOpenChange={(open) => !open && setRecipeToLog(null)}
+        onRecipeLogged={() => {
+          toast({
+            title: "Success",
+            description: "Recipe logged to nutrition tracker",
+          });
+        }}
+      />
     </div>
   );
 };

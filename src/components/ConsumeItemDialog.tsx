@@ -5,6 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  fetchNutritionProfile,
+  scaleNutritionByGrams,
+  logNutritionToDaily,
+  parseQuantity,
+} from "@/lib/nutritionService";
 
 interface KitchenItem {
   id: string;
@@ -20,15 +26,6 @@ interface ConsumeItemDialogProps {
   onItemConsumed: () => void;
 }
 
-// Simple nutrition fallback values per 100g
-const NUTRITION_FALLBACK: Record<string, { energy_kcal: number; protein_g: number; fat_g: number; carbs_g: number }> = {
-  "default": { energy_kcal: 150, protein_g: 5, fat_g: 5, carbs_g: 20 },
-};
-
-const parseQuantity = (quantityStr: string): number => {
-  const match = quantityStr.match(/(\d+(\.\d+)?)/);
-  return match ? parseFloat(match[1]) : 100;
-};
 
 export const ConsumeItemDialog = ({ item, open, onOpenChange, onItemConsumed }: ConsumeItemDialogProps) => {
   const [loading, setLoading] = useState(false);
@@ -48,55 +45,10 @@ export const ConsumeItemDialog = ({ item, open, onOpenChange, onItemConsumed }: 
       const amountNum = parseQuantity(consumedAmount);
       const currentNum = parseQuantity(item.quantity);
 
-      // Get nutrition profile or use fallback
-      const { data: nutritionProfile } = await supabase
-        .from("nutrition_profiles")
-        .select("*")
-        .ilike("food_name", `%${item.name}%`)
-        .limit(1)
-        .maybeSingle();
-
-      const nutrition = nutritionProfile || {
-        ...NUTRITION_FALLBACK.default,
-        is_estimate: true,
-      };
-
-      // Calculate nutrition based on consumed amount (assuming per 100g)
-      const multiplier = amountNum / 100;
-      const calories = nutrition.energy_kcal * multiplier;
-      const protein = nutrition.protein_g * multiplier;
-      const fat = nutrition.fat_g * multiplier;
-      const carbs = nutrition.carbs_g * multiplier;
-
-      // Update or insert daily nutrition log
-      const today = new Date().toISOString().split("T")[0];
-      const { data: existingLog } = await supabase
-        .from("daily_nutrition_log")
-        .select("*")
-        .eq("date", today)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingLog) {
-        await supabase
-          .from("daily_nutrition_log")
-          .update({
-            total_calories: existingLog.total_calories + calories,
-            total_protein: existingLog.total_protein + protein,
-            total_fat: existingLog.total_fat + fat,
-            total_carbs: existingLog.total_carbs + carbs,
-          })
-          .eq("id", existingLog.id);
-      } else {
-        await supabase.from("daily_nutrition_log").insert({
-          user_id: user.id,
-          date: today,
-          total_calories: calories,
-          total_protein: protein,
-          total_fat: fat,
-          total_carbs: carbs,
-        });
-      }
+      // Use shared nutrition service
+      const nutrition = await fetchNutritionProfile(item.name);
+      const scaled = scaleNutritionByGrams(nutrition, amountNum);
+      await logNutritionToDaily(user.id, scaled);
 
       // Update or delete kitchen item
       const newAmount = currentNum - amountNum;
