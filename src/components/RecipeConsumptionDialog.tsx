@@ -70,7 +70,26 @@ function parseIngredientsFromRecipe(content: string): Ingredient[] {
     // Try to extract specific amounts from common patterns
     const content = cleaned.toLowerCase();
     
-    if (content.includes("egg")) {
+    // Spices and herbs - realistic small quantities
+    const isSpiceOrHerb = 
+      content.includes("salt") || content.includes("pepper") ||
+      content.includes("paprika") || content.includes("cumin") ||
+      content.includes("oregano") || content.includes("basil") ||
+      content.includes("thyme") || content.includes("rosemary") ||
+      content.includes("parsley") || content.includes("coriander") ||
+      content.includes("cinnamon") || content.includes("nutmeg") ||
+      content.includes("garlic powder") || content.includes("onion powder") ||
+      content.includes("cayenne") || content.includes("chili powder") ||
+      content.includes("curry") || content.includes("turmeric") ||
+      content.includes("ginger") || content.includes("vanilla");
+    
+    if (isSpiceOrHerb) {
+      // Spices default to 1-3g
+      amount = 2;
+    } else if (content.includes("oil") || content.includes("olive")) {
+      // Oils default to 1 tbsp = 15ml
+      amount = 15;
+    } else if (content.includes("egg")) {
       const eggMatch = content.match(/(\d+)/);
       amount = eggMatch ? parseInt(eggMatch[1]) * 50 : 100; // ~50g per egg
     } else if (content.includes("tbsp") || content.includes("tablespoon")) {

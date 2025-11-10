@@ -119,7 +119,7 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-8">
       {/* Input Form */}
       <Card className="border-border/50 shadow-xl">
         <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b">
@@ -205,6 +205,24 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
                 onChange={(e) => setCookingFor(e.target.value)}
                 className="text-base"
               />
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border">
+              <div className="space-y-1">
+                <Label htmlFor="shopping" className="text-base font-medium">Can go shopping</Label>
+                <p className="text-sm text-muted-foreground">
+                  Include recipes that need extra ingredients
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="shopping"
+                  type="checkbox"
+                  checked={goingShopping}
+                  onChange={(e) => setGoingShopping(e.target.checked)}
+                  className="w-10 h-6 rounded-full appearance-none bg-muted checked:bg-primary transition-colors cursor-pointer relative before:content-[''] before:absolute before:w-5 before:h-5 before:rounded-full before:bg-background before:top-0.5 before:left-0.5 before:transition-transform checked:before:translate-x-4"
+                />
+              </div>
             </div>
 
             {goingShopping && (

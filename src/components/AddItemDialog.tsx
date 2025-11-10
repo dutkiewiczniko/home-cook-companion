@@ -52,21 +52,66 @@ export const AddItemDialog = ({ onItemAdded }: AddItemDialogProps) => {
         throw new Error("Not authenticated");
       }
 
-      const { error } = await supabase.from("kitchen_items").insert([{
-        user_id: user.id,
-        name: selectedFood.name,
-        quantity: quantity || getDefaultQuantity(selectedFood.name),
-        category: storageCategory,
-        notes: notes || null,
-        best_before_date: bestBefore || null,
-      }]);
+      const itemName = selectedFood.name;
+      const itemQuantity = quantity || getDefaultQuantity(itemName);
 
-      if (error) throw error;
+      // Check if item already exists (case-insensitive)
+      const { data: existingItems } = await supabase
+        .from("kitchen_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .ilike("name", itemName);
 
-      toast({
-        title: "Item added!",
-        description: `${selectedFood.name} has been added to your ${selectedFood.category}.`,
-      });
+      if (existingItems && existingItems.length > 0) {
+        // Item exists - merge quantities
+        const existingItem = existingItems[0];
+        
+        // Parse existing quantity
+        const existingQtyMatch = existingItem.quantity.match(/(\d+(?:\.\d+)?)/);
+        const existingQty = existingQtyMatch ? parseFloat(existingQtyMatch[1]) : 0;
+        
+        // Parse new quantity
+        const newQtyMatch = itemQuantity.match(/(\d+(?:\.\d+)?)/);
+        const newQty = newQtyMatch ? parseFloat(newQtyMatch[1]) : 0;
+        
+        // Get unit (g, kg, L, ml, items, etc.)
+        const unit = existingItem.quantity.match(/[a-zA-Z]+/)?.[0] || itemQuantity.match(/[a-zA-Z]+/)?.[0] || "";
+        
+        const mergedQuantity = `${existingQty + newQty} ${unit}`.trim();
+        
+        // Update existing item with merged quantity
+        const { error } = await supabase
+          .from("kitchen_items")
+          .update({ 
+            quantity: mergedQuantity,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingItem.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Item updated!",
+          description: `Merged ${itemName}: ${existingItem.quantity} + ${itemQuantity} = ${mergedQuantity}`,
+        });
+      } else {
+        // Item doesn't exist - insert new
+        const { error } = await supabase.from("kitchen_items").insert([{
+          user_id: user.id,
+          name: itemName,
+          quantity: itemQuantity,
+          category: storageCategory,
+          notes: notes || null,
+          best_before_date: bestBefore || null,
+        }]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Item added!",
+          description: `${itemName} has been added to your ${selectedFood.category}.`,
+        });
+      }
 
       setSelectedFood(null);
       setQuantity("");
