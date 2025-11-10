@@ -39,21 +39,70 @@ interface Ingredient {
  * Extract ingredients from recipe markdown content
  */
 function parseIngredientsFromRecipe(content: string): Ingredient[] {
-  const ingredientSection = content.split("Ingredients:")[1]?.split("Instructions:")[0];
+  // Look for the actual format: "**Ingredients needed:**" and "**Simple cooking instructions:**"
+  const ingredientSection = content.split(/\*\*Ingredients needed:\*\*/i)[1]?.split(/\*\*Simple cooking instructions:\*\*/i)[0];
   if (!ingredientSection) return [];
 
   const lines = ingredientSection
     .split("\n")
-    .filter((line) => line.trim().startsWith("-") || line.trim().match(/^\d+/));
+    .filter((line) => line.trim().startsWith("-"))
+    .map(line => line.trim());
 
   return lines.map((line) => {
-    // Remove leading dash or number
-    const cleaned = line.replace(/^[-\d.]+\s*/, "").trim();
-    // Extract amount if present (simple heuristic)
-    const amountMatch = cleaned.match(/(\d+)\s*(g|ml|kg|l)/i);
-    const amount = amountMatch ? parseInt(amountMatch[1]) : 100;
-    // Extract name (everything before amount or just the whole thing)
-    const name = cleaned.split(/\d+\s*(g|ml|kg|l)/i)[0].trim() || cleaned;
+    // Remove leading dash
+    const cleaned = line.replace(/^-\s*/, "").trim();
+    
+    // Try to extract amount and name from formats like:
+    // "Eggs (2-3)" -> name: "Eggs", amount: 100g (default for eggs)
+    // "Butter (1 tbsp)" -> name: "Butter", amount: 15g
+    // "Milk (1/2 cup)" -> name: "Milk", amount: 120ml
+    // "Cheddar cheese (grated, to taste)" -> name: "Cheddar cheese", amount: 50g
+    
+    let name = cleaned;
+    let amount = 100; // default
+    
+    // Extract ingredient name (everything before parenthesis or the whole thing)
+    const nameMatch = cleaned.match(/^([^(]+)/);
+    if (nameMatch) {
+      name = nameMatch[1].trim();
+    }
+    
+    // Try to extract specific amounts from common patterns
+    const content = cleaned.toLowerCase();
+    
+    if (content.includes("egg")) {
+      const eggMatch = content.match(/(\d+)/);
+      amount = eggMatch ? parseInt(eggMatch[1]) * 50 : 100; // ~50g per egg
+    } else if (content.includes("tbsp") || content.includes("tablespoon")) {
+      amount = 15;
+    } else if (content.includes("tsp") || content.includes("teaspoon")) {
+      amount = 5;
+    } else if (content.includes("cup")) {
+      const cupMatch = content.match(/(\d+(?:\/\d+)?)/);
+      if (cupMatch) {
+        const fraction = cupMatch[1];
+        if (fraction.includes("/")) {
+          const [num, denom] = fraction.split("/").map(Number);
+          amount = Math.round((num / denom) * 240);
+        } else {
+          amount = parseInt(fraction) * 240;
+        }
+      } else {
+        amount = 240;
+      }
+    } else {
+      // Look for explicit gram/ml measurements
+      const gramMatch = content.match(/(\d+)\s*(g|gram|ml|milliliter)/i);
+      if (gramMatch) {
+        amount = parseInt(gramMatch[1]);
+      } else {
+        // Default amounts for common ingredients
+        if (content.includes("cheese")) amount = 50;
+        else if (content.includes("butter")) amount = 15;
+        else if (content.includes("milk")) amount = 120;
+        else amount = 100;
+      }
+    }
 
     return { name, amount };
   });
