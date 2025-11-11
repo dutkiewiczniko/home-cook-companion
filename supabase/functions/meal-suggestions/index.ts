@@ -23,7 +23,7 @@ serve(async (req) => {
       .map((item: any) => `- ${item.name} (${item.quantity}) [${item.category}]`)
       .join('\n');
 
-    let promptParts = [`You are a helpful cooking assistant. Based on the following kitchen inventory, suggest 3 delicious meal ideas.
+    let promptParts = [`You are a helpful cooking assistant. Based on the following kitchen inventory (as well as other ingredients if user can go shopping), suggest 3 delicious meal ideas.
 
 Available Ingredients:
 ${itemsList}
@@ -42,7 +42,7 @@ ${itemsList}
     }
     
     if (goingShopping) {
-      promptParts.push('User can go shopping for additional ingredients');
+      promptParts.push('User can go shopping for additional ingredients, dont just use ingredients from the inventory');
       if (budget) {
         promptParts.push(`Budget: €${budget}`);
       }
@@ -75,7 +75,7 @@ Format your response using markdown with ### for headings, ** for bold text, and
         messages: [
           {
             role: 'system',
-            content: 'You are a creative and helpful cooking assistant. Provide practical, delicious meal suggestions based on available ingredients.'
+            content: 'You are a creative and helpful cooking assistant. Provide practical, delicious meal suggestions.'
           },
           {
             role: 'user',
