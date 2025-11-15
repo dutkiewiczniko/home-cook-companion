@@ -49,6 +49,7 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
   const [homeIngredientUsage, setHomeIngredientUsage] = useState(60); // 0-100%
   const [showPromptDebug, setShowPromptDebug] = useState(false);
   const [lastPromptData, setLastPromptData] = useState<any>(null);
+  const [lastFullPrompt, setLastFullPrompt] = useState<string>("");
   const { toast } = useToast();
 
 
@@ -111,8 +112,10 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
         setRecipes((prev) =>
           prev.map((r) => (r.id === tweakRecipeId ? data.recipe : r))
         );
+        if (data.debugPrompt) setLastFullPrompt(data.debugPrompt);
       } else {
         setRecipes(data.recipes);
+        if (data.debugPrompt) setLastFullPrompt(data.debugPrompt);
       }
     } catch (error: any) {
       console.error("Error generating recipes:", error);
@@ -437,15 +440,43 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
 
       {/* Debug Prompt Dialog */}
       <Dialog open={showPromptDebug} onOpenChange={setShowPromptDebug}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Debug: Request Parameters</DialogTitle>
-            <DialogDescription>Full payload sent to the AI function for this request.</DialogDescription>
+            <DialogTitle>Debug: AI Request Details</DialogTitle>
+            <DialogDescription>View and copy the exact request sent to Gemini</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-[60vh] w-full rounded-md border p-4">
-            <pre className="text-xs whitespace-pre-wrap">
-              {JSON.stringify(lastPromptData, null, 2)}
-            </pre>
+          <ScrollArea className="h-[70vh] w-full">
+            <div className="space-y-6 p-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">Full Prompt Sent to Gemini</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(lastFullPrompt);
+                      toast({ title: "Copied!", description: "Prompt copied to clipboard" });
+                    }}
+                  >
+                    Copy Prompt
+                  </Button>
+                </div>
+                <div className="rounded-md border bg-muted/50 p-4">
+                  <pre className="text-xs whitespace-pre-wrap font-mono">
+                    {lastFullPrompt || "No prompt available"}
+                  </pre>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-lg mb-2">Request Parameters</h3>
+                <div className="rounded-md border bg-muted/50 p-4">
+                  <pre className="text-xs whitespace-pre-wrap font-mono">
+                    {JSON.stringify(lastPromptData, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
