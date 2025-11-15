@@ -10,6 +10,8 @@ import { Sparkles, Loader2, RefreshCw, Wand2, Utensils } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { RecipeConsumptionDialog } from "@/components/RecipeConsumptionDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Recipe {
   id: string;
@@ -44,6 +46,9 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
   const [tweakingRecipeId, setTweakingRecipeId] = useState<string | null>(null);
   const [tweakText, setTweakText] = useState("");
   const [recipeToLog, setRecipeToLog] = useState<Recipe | null>(null);
+  const [homeIngredientUsage, setHomeIngredientUsage] = useState(60); // 0-100%
+  const [showPromptDebug, setShowPromptDebug] = useState(false);
+  const [lastPromptData, setLastPromptData] = useState<any>(null);
   const { toast } = useToast();
 
 
@@ -60,21 +65,26 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
     setLoading(true);
 
     try {
+      const requestBody = {
+        items,
+        mealType,
+        dietaryPreference,
+        optionalIngredients,
+        generalNotes,
+        cookingFor: parseInt(cookingFor) || 1,
+        budget,
+        goingShopping,
+        homeIngredientUsage,
+        regenerateAll,
+        tweakRecipeId,
+        tweakPrompt,
+        currentRecipes: recipes,
+      };
+      
+      setLastPromptData(requestBody); // Store for debug view
+      
       const { data, error } = await supabase.functions.invoke("generate-recipes", {
-        body: {
-          items,
-          mealType,
-          dietaryPreference,
-          optionalIngredients,
-          generalNotes,
-          cookingFor: parseInt(cookingFor) || 1,
-          budget,
-          goingShopping,
-          regenerateAll,
-          tweakRecipeId,
-          tweakPrompt,
-          currentRecipes: recipes,
-        },
+        body: requestBody,
       });
 
       if (error) {
@@ -207,6 +217,32 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
               />
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="home-ingredient-slider" className="text-base">
+                  Use ingredients from home
+                </Label>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {homeIngredientUsage}%
+                </span>
+              </div>
+              <input
+                id="home-ingredient-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="10"
+                value={homeIngredientUsage}
+                onChange={(e) => setHomeIngredientUsage(parseInt(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider-thumb"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Shop-focused</span>
+                <span>Balanced</span>
+                <span>Pantry-first</span>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border">
               <div className="space-y-1">
                 <Label htmlFor="shopping" className="text-base font-medium">Can go shopping</Label>
@@ -242,23 +278,36 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
               </div>
             )}
 
-            <Button
-              onClick={() => generateRecipes(true)}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg text-base py-6"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Generating recipes...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Generate 5 Recipes
-                </>
+            <div className="space-y-2">
+              <Button
+                onClick={() => generateRecipes(true)}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg text-base py-6"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Generating recipes...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Generate 5 Recipes
+                  </>
+                )}
+              </Button>
+              
+              {lastPromptData && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPromptDebug(true)}
+                  className="w-full"
+                >
+                  Show Debug Info
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -385,6 +434,20 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
           });
         }}
       />
+
+      {/* Debug Prompt Dialog */}
+      <Dialog open={showPromptDebug} onOpenChange={setShowPromptDebug}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Debug: Request Parameters</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] w-full rounded-md border p-4">
+            <pre className="text-xs whitespace-pre-wrap">
+              {JSON.stringify(lastPromptData, null, 2)}
+            </pre>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -23,7 +23,7 @@ serve(async (req) => {
       .map((item: any) => `- ${item.name} (${item.quantity}) [${item.category}]`)
       .join('\n');
 
-    let promptParts = [`You are a non-helpful cooking assistant. Based on the following kitchen inventory (as well as other ingredients if user can go shopping), suggest 3 fake meal ideas.
+    let promptParts = [`You are a helpful cooking assistant. Based on the following kitchen inventory (as well as other ingredients if user can go shopping), suggest 3 delicious meal ideas.
 
 Available Ingredients:
 ${itemsList}
