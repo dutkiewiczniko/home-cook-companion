@@ -98,6 +98,8 @@ ${itemsList}` : ''}
     promptParts.push(`
 **CRITICAL OUTPUT FORMAT - STRICT JSON ONLY:**
 Return ONLY a valid JSON object, no intro text, no explanations, no markdown.
+Do NOT wrap the JSON in code fences or backticks. Use only standard JSON characters.
+Ensure all newlines inside strings are escaped as \\n and any quotes inside strings are escaped.
 The JSON must have this exact structure:
 
 {
@@ -173,86 +175,107 @@ Return exactly ${regenerateAll ? '5' : '1'} recipe(s) in the recipes array.`);
     }
 
     const data = await response.json();
-    let rawContent = data.choices[0].message.content;
+    let rawContent = data.choices?.[0]?.message?.content ?? '';
 
     console.log('Raw AI response:', rawContent.substring(0, 200));
 
-    // Strip markdown code blocks if present
-    rawContent = rawContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // Strip any leading text before the JSON object
+    // Normalize and strip markdown fences/backticks and odd characters
+    rawContent = rawContent
+      .replace(/```json\s*/gi, '')
+      .replace(/```/g, '')
+      .replace(/[\u201C\u201D]/g, '"') // smart double quotes
+      .replace(/[\u2018\u2019]/g, "'") // smart single quotes
+      .replace(/^\uFEFF/, '') // BOM
+      .trim();
+
+    // Isolate the first JSON object if extra text surrounds it
     const jsonStartIndex = rawContent.indexOf('{');
-    if (jsonStartIndex > 0) {
-      console.log('Stripping intro text before JSON');
-      rawContent = rawContent.substring(jsonStartIndex);
-    }
-
-    // Strip any trailing text after the JSON object
     const jsonEndIndex = rawContent.lastIndexOf('}');
-    if (jsonEndIndex > 0 && jsonEndIndex < rawContent.length - 1) {
-      console.log('Stripping outro text after JSON');
-      rawContent = rawContent.substring(0, jsonEndIndex + 1);
-    }
-    
-    // Clean up any remaining whitespace and control characters
-    rawContent = rawContent.trim();
-
-    let parsedData;
-    try {
-      parsedData = JSON.parse(rawContent);
-    } catch (parseError) {
-      console.error('JSON parse failed:', parseError);
-      console.error('Content snippet:', rawContent.substring(0, 500));
-      throw new Error('AI returned invalid JSON format');
+    if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+      rawContent = rawContent.substring(jsonStartIndex, jsonEndIndex + 1);
     }
 
-    if (!parsedData.recipes || !Array.isArray(parsedData.recipes)) {
-      throw new Error('AI response missing recipes array');
+    function tryParseJson(s: string) {
+      try { return JSON.parse(s); } catch (_) {}
+      try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch (_) {}
+      return null;
     }
 
-    // Validate and clean recipes
-    const validRecipes = parsedData.recipes.filter((r: any) => {
-      const hasRequiredFields = r.id && r.title && r.content;
-      const hasIngredients = r.content.includes('Ingredients needed');
-      const hasInstructions = r.content.includes('cooking instructions');
-      return hasRequiredFields && hasIngredients && hasInstructions;
-    }).slice(0, 5);
+    let parsed = tryParseJson(rawContent);
+    let fallbackToMarkdown = false;
 
-    if (validRecipes.length === 0) {
-      throw new Error('No valid recipes returned by AI');
+    if (!parsed || !parsed.recipes) {
+      console.warn('Primary JSON parse failed. Falling back to markdown parsing.');
+      fallbackToMarkdown = true;
     }
 
-    console.log(`Successfully validated ${validRecipes.length} recipes`);
-    
+    const normalizeDifficulty = (t: string) => {
+      const m = (t || '').toLowerCase();
+      if (m.includes('easy')) return 'Easy';
+      if (m.includes('hard')) return 'Hard';
+      return 'Medium';
+    };
+
+    const hasRequiredSections = (content: string) => {
+      const lower = (content || '').toLowerCase();
+      const hasIngr = lower.includes('ingredients needed') || lower.includes('ingredients');
+      const hasSteps = lower.includes('simple cooking instructions') || lower.includes('instructions');
+      return hasIngr && hasSteps;
+    };
+
+    let recipes: any[] = [];
+
+    if (!fallbackToMarkdown) {
+      const arr = Array.isArray(parsed.recipes) ? parsed.recipes : [];
+      recipes = arr.filter((r: any) => r && r.id && r.title && r.content && hasRequiredSections(r.content))
+        .slice(0, 5)
+        .map((r: any, index: number) => ({
+          id: r.id || `recipe-${Date.now()}-${index}`,
+          title: r.title,
+          time: r.time || extractTime(r.content || ''),
+          difficulty: r.difficulty || normalizeDifficulty(r.content || ''),
+          content: r.content,
+          calories: typeof r.calories === 'number' ? r.calories : 0,
+          protein: typeof r.protein === 'number' ? r.protein : 0,
+          fat: typeof r.fat === 'number' ? r.fat : 0,
+          carbs: typeof r.carbs === 'number' ? r.carbs : 0,
+        }));
+    } else {
+      const suggestions = data.choices?.[0]?.message?.content ?? '';
+      const parts = suggestions.split('##').filter((p: string) => p.trim());
+      recipes = parts.slice(0, 5).map((part: string, index: number) => ({
+        id: `recipe-${Date.now()}-${index}`,
+        title: part.split('\n')[0].trim(),
+        time: extractTime(part),
+        difficulty: extractDifficulty(part),
+        content: '## ' + part,
+        calories: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
+      })).filter((r: any) => hasRequiredSections(r.content));
+    }
+
+    if (recipes.length === 0) {
+      console.error('No valid recipes could be parsed. Returning graceful empty payload.');
+      return new Response(
+        JSON.stringify({ recipes: [], warning: 'AI output could not be parsed. Please try again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Successfully prepared ${recipes.length} recipe(s)`);
+
     if (tweakRecipeId) {
-      // Return single tweaked recipe
-      const recipe = {
-        ...validRecipes[0],
-        id: tweakRecipeId,
-      };
-      
+      const recipe = { ...recipes[0], id: tweakRecipeId };
       return new Response(
         JSON.stringify({ recipe }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const recipes = validRecipes.map((r: any, index: number) => ({
-      id: r.id || `recipe-${Date.now()}-${index}`,
-      title: r.title,
-      time: r.time || '30 minutes',
-      difficulty: r.difficulty || 'Medium',
-      content: r.content,
-      calories: r.calories || 0,
-      protein: r.protein || 0,
-      fat: r.fat || 0,
-      carbs: r.carbs || 0,
-    }));
-
-    console.log('Successfully generated recipes');
-
     return new Response(
-      JSON.stringify({ recipes }),
+      JSON.stringify({ recipes: recipes.slice(0, 5) }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
