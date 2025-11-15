@@ -269,13 +269,13 @@ Return exactly ${regenerateAll ? '5' : '1'} recipe(s) in the recipes array.`);
     if (tweakRecipeId) {
       const recipe = { ...recipes[0], id: tweakRecipeId };
       return new Response(
-        JSON.stringify({ recipe }),
+        JSON.stringify({ recipe, debugPrompt: prompt }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ recipes: recipes.slice(0, 5) }),
+      JSON.stringify({ recipes: recipes.slice(0, 5), debugPrompt: prompt }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
