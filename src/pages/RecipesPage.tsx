@@ -10,7 +10,7 @@ import { Sparkles, Loader2, RefreshCw, Wand2, Utensils } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { RecipeConsumptionDialog } from "@/components/RecipeConsumptionDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Recipe {
@@ -440,6 +440,7 @@ export const RecipesPage = ({ items }: RecipesPageProps) => {
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Debug: Request Parameters</DialogTitle>
+            <DialogDescription>Full payload sent to the AI function for this request.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-[60vh] w-full rounded-md border p-4">
             <pre className="text-xs whitespace-pre-wrap">
