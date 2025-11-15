@@ -177,6 +177,9 @@ Return exactly ${regenerateAll ? '5' : '1'} recipe(s) in the recipes array.`);
 
     console.log('Raw AI response:', rawContent.substring(0, 200));
 
+    // Strip markdown code blocks if present
+    rawContent = rawContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    
     // Strip any leading text before the JSON object
     const jsonStartIndex = rawContent.indexOf('{');
     if (jsonStartIndex > 0) {
@@ -190,6 +193,9 @@ Return exactly ${regenerateAll ? '5' : '1'} recipe(s) in the recipes array.`);
       console.log('Stripping outro text after JSON');
       rawContent = rawContent.substring(0, jsonEndIndex + 1);
     }
+    
+    // Clean up any remaining whitespace and control characters
+    rawContent = rawContent.trim();
 
     let parsedData;
     try {
