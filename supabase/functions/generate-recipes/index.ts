@@ -44,56 +44,59 @@ serve(async (req) => {
       // Tweaking a specific recipe
       const recipeToTweak = currentRecipes.find((r: any) => r.id === tweakRecipeId);
       promptParts.push(`You are a helpful cooking assistant. The user wants to modify this recipe:\n\n${recipeToTweak.content}\n\nUser's request: ${tweakPrompt}\n\nProvide a modified version of the recipe based on the user's request.`);
-    } else {
-      // Generating new recipes
-      
-      // Determine ingredient preference wording based on slider
-      let ingredientStrategy = '';
-      if (homeIngredientUsage <= 20) {
-        ingredientStrategy = 'Ignore the pantry inventory entirely. Design new meals using fresh supermarket ingredients.';
-      } else if (homeIngredientUsage <= 40) {
-        ingredientStrategy = 'Prefer fresh supermarket ingredients, but you may use 1-2 pantry items if they enhance the meal.';
-      } else if (homeIngredientUsage <= 60) {
-        ingredientStrategy = 'Mix pantry and supermarket ingredients evenly. Create balanced recipes using both.';
-      } else if (homeIngredientUsage <= 80) {
-        ingredientStrategy = 'Prefer pantry ingredients. Only add extras from the supermarket when truly needed for the recipe.';
       } else {
-        ingredientStrategy = 'Use ONLY pantry ingredients. Do not suggest any items from the supermarket.';
-      }
+        // Generating new recipes
+        
+        // Determine ingredient preference wording based on slider
+        let ingredientStrategy = '';
+        if (homeIngredientUsage <= 20) {
+          ingredientStrategy = 'Mostly ignore the pantry inventory. Prefer designing new meals using fresh supermarket ingredients.';
+        } else if (homeIngredientUsage <= 40) {
+          ingredientStrategy = 'Prefer fresh supermarket ingredients, but you may use up to 2-3 pantry items if they clearly enhance the meal.';
+        } else if (homeIngredientUsage <= 60) {
+          ingredientStrategy = 'Mix pantry and supermarket ingredients in a balanced way. Do not over-prioritise either.';
+        } else if (homeIngredientUsage <= 80) {
+          ingredientStrategy = 'Prefer pantry ingredients. Add supermarket items only when they noticeably improve the recipe.';
+        } else {
+          ingredientStrategy = 'Use ONLY pantry ingredients. Do not suggest any items from the supermarket.';
+        }
 
-      promptParts.push(`You are a helpful cooking assistant. Generate ${regenerateAll ? '5' : '1'} delicious meal recipe(s).
+        promptParts.push(`You are a helpful cooking assistant. Generate ${regenerateAll ? '5' : '1'} delicious meal recipe(s).
 
-**CRITICAL CONSTRAINT - USER NOTES OVERRIDE EVERYTHING:**
-${generalNotes ? `The user has specified: "${generalNotes}"
-ALL recipes MUST align with this theme or constraint. This is a HARD REQUIREMENT that overrides all other preferences including ingredient usage, meal type, and dietary preferences.` : 'No specific user notes provided.'}
+      **USER NOTES – HIGH PRIORITY THEME:**
+      ${generalNotes
+        ? `The user has specified: "${generalNotes}"
+      Treat this as the main theme, flavour profile, or focus for the recipes. Recipes should closely reflect this where it makes sense, but still respect meal type, dietary preferences, and the ingredient usage strategy. If there is a conflict, prioritise safety and dietary constraints first, then ingredient usage strategy, and then user notes.`
+        : 'No specific user notes provided. You may choose a suitable theme yourself.'}
 
-**Ingredient Usage Strategy:**
-${ingredientStrategy}
+      **Ingredient Usage Strategy:**
+      ${ingredientStrategy}
 
-${homeIngredientUsage > 0 ? `**Pantry Inventory:**
-${itemsList}` : ''}
+      ${homeIngredientUsage > 0 ? `**Pantry Inventory:**
+      ${itemsList}` : ''}
 
-**Cooking for:** ${cookingFor} ${cookingFor === 1 ? 'person' : 'people'}`);
+      **Cooking for:** ${cookingFor} ${cookingFor === 1 ? 'person' : 'people'}`);  
 
-      if (mealType) {
-        promptParts.push(`**Meal Type:** ${mealType}`);
-      }
-      
-      if (dietaryPreference) {
-        promptParts.push(`**Dietary Preference:** ${dietaryPreference}`);
-      }
-      
-      if (optionalIngredients) {
-        promptParts.push(`**Optional ingredients to explore:** ${optionalIngredients}`);
-      }
-      
-      if (goingShopping) {
-        promptParts.push('**Shopping Mode:** User can purchase additional ingredients from the supermarket.');
-        if (budget) {
-          promptParts.push(`**Budget Constraint:** Try to keep total recipe cost under €${budget} using estimated Irish grocery prices.`);
+        if (mealType) {
+          promptParts.push(`**Meal Type:** ${mealType}`);
+        }
+        
+        if (dietaryPreference) {
+          promptParts.push(`**Dietary Preference:** ${dietaryPreference}`);
+        }
+        
+        if (optionalIngredients) {
+          promptParts.push(`**Optional ingredients to explore:** ${optionalIngredients}`);
+        }
+        
+        if (goingShopping) {
+          promptParts.push('**Shopping Mode:** User can purchase additional ingredients from the supermarket.');
+          if (budget) {
+            promptParts.push(`**Budget Constraint:** Try to keep total recipe cost under €${budget} using estimated Irish grocery prices.`);
+          }
         }
       }
-    }
+
 
     promptParts.push(`
 **CRITICAL OUTPUT FORMAT - STRICT JSON ONLY:**
