@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus, Edit, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -46,7 +47,7 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
   // Form state
   const [displayName, setDisplayName] = useState("");
   const [brand, setBrand] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<string>("pantry");
   const [packageSize, setPackageSize] = useState("");
   const [barcode, setBarcode] = useState("");
   const [energyKcal, setEnergyKcal] = useState("");
@@ -54,6 +55,8 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
   const [fatG, setFatG] = useState("");
   const [carbsG, setCarbsG] = useState("");
   const [servingSizeG, setServingSizeG] = useState("100");
+
+  const STORAGE_CATEGORIES = ["fridge", "freezer", "produce", "spices", "pantry"] as const;
 
   useEffect(() => {
     if (open && pinVerified) {
@@ -94,7 +97,7 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
   const resetForm = () => {
     setDisplayName("");
     setBrand("");
-    setCategory("");
+    setCategory("pantry");
     setPackageSize("");
     setBarcode("");
     setEnergyKcal("");
@@ -110,7 +113,7 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
     setEditingProduct(product);
     setDisplayName(product.display_name);
     setBrand(product.brand || "");
-    setCategory(product.category || "");
+    setCategory(product.category || "pantry");
     setPackageSize(product.package_size || "");
     setBarcode(product.barcode || "");
     setIsCreating(true);
@@ -380,13 +383,19 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Input
-                      id="category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      placeholder="e.g. Bread, Dairy, Cereal"
-                    />
+                    <Label htmlFor="category">Storage Category</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STORAGE_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

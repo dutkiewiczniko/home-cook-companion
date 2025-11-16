@@ -25,8 +25,29 @@ export interface ScaledNutrition {
 
 /**
  * Fetch nutrition profile from database by ingredient name
+ * Also checks products table for branded items
  */
 export async function fetchNutritionProfile(ingredientName: string): Promise<NutritionData> {
+  // First, try to match against products (branded items)
+  const { data: product } = await supabase
+    .from("products")
+    .select("nutrition_profile_id, nutrition_profiles(*)")
+    .ilike("display_name", `%${ingredientName}%`)
+    .limit(1)
+    .maybeSingle();
+
+  if (product?.nutrition_profiles) {
+    const profile = product.nutrition_profiles as any;
+    return {
+      energy_kcal: profile.energy_kcal,
+      protein_g: profile.protein_g,
+      fat_g: profile.fat_g,
+      carbs_g: profile.carbs_g,
+      is_estimate: profile.is_estimate,
+    };
+  }
+
+  // Fall back to generic nutrition profiles
   const { data: nutritionProfile } = await supabase
     .from("nutrition_profiles")
     .select("*")
