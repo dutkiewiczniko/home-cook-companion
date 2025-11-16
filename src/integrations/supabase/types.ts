@@ -125,6 +125,50 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          barcode: string | null
+          brand: string | null
+          category: string | null
+          created_at: string
+          display_name: string
+          id: string
+          nutrition_profile_id: string | null
+          package_size: string | null
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          nutrition_profile_id?: string | null
+          package_size?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          nutrition_profile_id?: string | null
+          package_size?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_nutrition_profile_id_fkey"
+            columns: ["nutrition_profile_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,9 +5,10 @@ import { AddItemDialog } from "@/components/AddItemDialog";
 import { KitchenInventory } from "@/components/KitchenInventory";
 import { RecipesPage } from "@/pages/RecipesPage";
 import { NutritionPage } from "@/pages/NutritionPage";
+import { ProductsAdminDialog } from "@/components/ProductsAdminDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChefHat, LogOut, Package, Sparkles, BarChart3 } from "lucide-react";
+import { ChefHat, LogOut, Package, Sparkles, BarChart3, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -15,6 +16,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [items, setItems] = useState<any[]>([]);
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -73,14 +75,24 @@ const Index = () => {
               <p className="text-muted-foreground">Your smart cooking companion</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-            className="gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowAdminDialog(true)}
+              title="Product Manager (Admin)"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSignOut}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Main Content - Tabs */}
@@ -121,6 +133,12 @@ const Index = () => {
             <NutritionPage />
           </TabsContent>
         </Tabs>
+
+        {/* Products Admin Dialog */}
+        <ProductsAdminDialog 
+          open={showAdminDialog} 
+          onOpenChange={setShowAdminDialog} 
+        />
       </div>
     </div>
   );
