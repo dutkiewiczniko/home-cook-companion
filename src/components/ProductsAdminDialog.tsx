@@ -10,8 +10,6 @@ import { Search, Plus, Edit, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const ADMIN_PIN = "6234";
-
 interface Product {
   id: string;
   display_name: string;
@@ -36,8 +34,7 @@ interface ProductsAdminDialogProps {
 }
 
 export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogProps) {
-  const [pinVerified, setPinVerified] = useState(false);
-  const [pinInput, setPinInput] = useState("");
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -59,25 +56,32 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
   const STORAGE_CATEGORIES = ["fridge", "freezer", "produce", "spices", "pantry"] as const;
 
   useEffect(() => {
-    if (open && pinVerified) {
-      fetchProducts();
-    }
-  }, [open, pinVerified]);
-
-  const handlePinSubmit = () => {
-    if (pinInput === ADMIN_PIN) {
-      setPinVerified(true);
-      setPinInput("");
-      toast({ title: "Access granted", description: "Welcome to product management" });
-    } else {
-      toast({ 
-        title: "Access denied", 
-        description: "Incorrect PIN", 
-        variant: "destructive" 
-      });
-      setPinInput("");
-    }
-  };
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      setIsAdmin(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        if (!cancelled) setIsAdmin(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("user_roles" as any)
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        setIsAdmin(false);
+        return;
+      }
+      const ok = !!data;
+      setIsAdmin(ok);
+      if (ok) fetchProducts();
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -242,31 +246,21 @@ export function ProductsAdminDialog({ open, onOpenChange }: ProductsAdminDialogP
       (p.brand && p.brand.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  if (!pinVerified) {
+  if (isAdmin !== true) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Admin Access Required</DialogTitle>
             <DialogDescription>
-              Enter the admin PIN to access product management
+              {isAdmin === null
+                ? "Checking permissions…"
+                : "Your account does not have admin privileges. Ask a project owner to grant you the 'admin' role in the user_roles table."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="pin">PIN Code</Label>
-              <Input
-                id="pin"
-                type="password"
-                placeholder="Enter PIN"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
-                maxLength={4}
-              />
-            </div>
-            <Button onClick={handlePinSubmit} className="w-full">
-              Unlock
+          <div className="py-4">
+            <Button onClick={() => onOpenChange(false)} className="w-full">
+              Close
             </Button>
           </div>
         </DialogContent>
