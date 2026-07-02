@@ -1,9 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const MAX_STRING = 1000;
+const MAX_ITEMS = 500;
+
+function s(v: unknown, max = MAX_STRING): string {
+  if (v === undefined || v === null) return '';
+  const str = String(v);
+  return str.length > max ? str.slice(0, max) : str;
+}
+
+function validateItems(raw: unknown): Array<{ name: string; quantity: string; category: string }> {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, MAX_ITEMS).map((it: any) => ({
+    name: s(it?.name, 200),
+    quantity: s(it?.quantity, 100),
+    category: s(it?.category, 50),
+  })).filter((it) => it.name);
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,24 +30,57 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      items, 
-      mealType, 
-      dietaryPreference, 
-      optionalIngredients, 
-      generalNotes,
-      cookingFor,
-      goingShopping, 
-      budget,
-      homeIngredientUsage = 60,
-      regenerateAll,
-      tweakRecipeId,
-      tweakPrompt,
-      currentRecipes
-    } = await req.json();
-    
+    // Verify JWT / authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const items = validateItems((body as any).items);
+    const mealType = s((body as any).mealType, 50);
+    const dietaryPreference = s((body as any).dietaryPreference, 100);
+    const optionalIngredients = s((body as any).optionalIngredients, MAX_STRING);
+    const generalNotes = s((body as any).generalNotes, 2000);
+    const cookingForRaw = Number((body as any).cookingFor);
+    const cookingFor = Number.isFinite(cookingForRaw) && cookingForRaw >= 1 && cookingForRaw <= 50
+      ? Math.floor(cookingForRaw) : 1;
+    const goingShopping = Boolean((body as any).goingShopping);
+    const budgetRaw = Number((body as any).budget);
+    const budget = Number.isFinite(budgetRaw) && budgetRaw >= 0 && budgetRaw <= 100000 ? budgetRaw : '';
+    const homeIngredientUsageRaw = Number((body as any).homeIngredientUsage);
+    const homeIngredientUsage = Number.isFinite(homeIngredientUsageRaw)
+      ? Math.max(0, Math.min(100, homeIngredientUsageRaw))
+      : 60;
+    const regenerateAll = Boolean((body as any).regenerateAll);
+    const tweakRecipeId = s((body as any).tweakRecipeId, 100);
+    const tweakPrompt = s((body as any).tweakPrompt, 2000);
+    const currentRecipesRaw = (body as any).currentRecipes;
+    const currentRecipes = Array.isArray(currentRecipesRaw) ? currentRecipesRaw.slice(0, 20) : [];
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
